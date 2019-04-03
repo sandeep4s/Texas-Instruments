@@ -1,0 +1,70 @@
+#include "msp430.h"
+
+#define BUTTON BIT3
+
+unsigned char Mode = 0;
+
+/* Function Prototype */
+void InitializeButton(void);
+
+/* Main function */
+void main(void)
+{
+ WDTCTL = WDTPW + WDTHOLD;          // Stop WDT
+
+ P1DIR |= (BIT0+BIT6);              // P1.2 to output
+ P1OUT |= (BIT0+BIT6);              // Set the LEDs P1.0 and P1.6 to on
+
+ InitializeButton();
+
+ _BIS_SR(LPM0_bits+GIE);        // Enter LPM0 with interrupts enabled
+}
+
+/* This function configures the button so it will trigger interrupts
+ * when pressed.  Those interrupts will be handled by PORT1_ISR() */
+void InitializeButton(void)
+{
+    P1DIR &= ~BUTTON;   // Set button pin as an input pin
+    P1OUT |= BUTTON;    // Set pull up resistor on for button
+    P1REN |= BUTTON;    // Enable pull up resistor for button to keep pin high until pressed
+    P1IES |= BUTTON;    // Enable Interrupt to trigger on the falling edge (high (unpressed) to low (pressed) transition)
+    P1IFG &= ~BUTTON;   // Clear the interrupt flag for the button
+    P1IE |= BUTTON;     // Enable interrupts on port 1 for the button
+}
+
+/* Port 1 interrupt to service the button press */
+#pragma vector=PORT1_VECTOR
+__interrupt void PORT1_ISR(void)
+{
+  P1IFG &= ~BUTTON;                 // Clear the interrupt flag for the button
+  P1IE &= ~BUTTON;                  // Disable Button interrupt
+  WDTCTL = WDT_MDLY_32;             // Start and set watchdog timer (WDT) to trigger every 32ms
+  IFG1 &= ~WDTIFG;                  // Clear the interrupt flag for the WDT
+  IE1 |= WDTIE;                     // enable WDT interrupt
+
+  if (Mode == 0)
+  {
+    P1OUT |= (BIT0);                // Set the LED P1.0 to on
+    P1OUT &= ~(BIT6);               // Set the LED P1.6 to off
+    Mode  = 1;
+    P1IES &= ~BIT3;                 // Clear edge detect to rising edge
+  }
+  else
+  {
+        P1OUT |= (BIT6);            // Set the LED P1.6 to on
+        P1OUT &= ~(BIT0);           // Set the LED P1.0 to off
+        Mode  = 0;
+        P1IES |= BUTTON;            // Set edge detect to rising edge
+  }
+}
+
+// WDT Interrupt Service Routine used to de-bounce button press
+#pragma vector=WDT_VECTOR
+__interrupt void WDT_ISR(void)
+{
+    IE1 &= ~WDTIE;                   // disable Watchdog timer (WDT) interrupt
+    IFG1 &= ~WDTIFG;                 // clear WDT interrupt flag
+    WDTCTL = WDTPW + WDTHOLD;        // put WDT back in hold state
+    P1IE |= BUTTON;                  // Reenable interrupts for the button
+}
+

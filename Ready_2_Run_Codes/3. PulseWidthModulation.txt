@@ -1,0 +1,32 @@
+#include <msp430.h>
+
+unsigned int i=0;
+void main(void) {
+    WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
+	P1DIR|=BIT3+BIT5;      //BIT3--EN;BIT2--IN1;BIT2--IN2
+	P1OUT&=~(BIT3+BIT5);
+
+	P1DIR |= 0x04;                            // P1.2--pwm pin
+	P1SEL |= 0x04;                            // P1.2--pwm pin
+
+	CCR0 = 1000-1;                             // PWM Period
+	CCTL1 = OUTMOD_7;                         // CCR1 reset/set
+	TACTL = TASSEL_2 + MC_1;                  // SMCLK, up mode
+
+	  while(1)
+	  {
+		   P1OUT|=BIT3;                       //EN should be high
+	       for(i=100;i<1000;i++)
+	       {
+		      CCR1=i;                        //CR1 represents duty cycle
+		      __delay_cycles(5000);
+	       }
+	       for(i=999;i>100;i--)
+	       {
+	    	   CCR1=i;
+	    	   __delay_cycles(5000);
+	       }
+	  }
+
+}
+

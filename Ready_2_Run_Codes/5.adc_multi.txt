@@ -1,0 +1,87 @@
+
+
+#include "msp430g2553.h"
+#include "UART.h"
+
+
+
+unsigned int ADC[4];  // Array to hold ADC values
+int A0value = 0;
+int A3value = 0;
+char newADC = 0;
+
+void main(void) {
+
+	WDTCTL = WDTPW + WDTHOLD;                 // Stop WDT
+
+
+
+	if (CALBC1_16MHZ ==0xFF || CALDCO_16MHZ == 0xFF) while(1);
+
+	DCOCTL = CALDCO_16MHZ;    // Set uC to run at approximately 16 Mhz
+	BCSCTL1 = CALBC1_16MHZ; 
+
+
+	
+
+
+	// Timer A Config
+	TACCTL0 = CCIE;       		// Enable Periodic interrupt
+	TACCR0 = 16000;                // period = 1ms   
+	TACTL = TASSEL_2 + MC_1; // source SMCLK, up mode
+
+	ADC10CTL1 = INCH_3 + ADC10SSEL_3 + CONSEQ_1; //INCH_3: Enable A3 first, Use SMCLK, Sequence of Channels
+
+	ADC10CTL0 = ADC10ON + MSC + ADC10IE;  // Turn on ADC,  Put in Multiple Sample and Conversion mode,  Enable Interrupt
+
+
+	ADC10AE0 |= 0x09;                   // Enable A0 and A3 which are P1.0,P1.3
+
+	ADC10DTC1 = 4;			       // Four conversions.
+	ADC10SA = (short)&ADC[0];           // ADC10 data transfer starting address.
+
+
+	
+
+	_BIS_SR(GIE); 		// Enable global interrupt
+
+
+	
+
+}
+
+
+// Timer A0 interrupt service routine
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void Timer_A (void)
+{
+	timecnt++; // Keep track of time for main while loop. 
+
+	if ((timecnt%500) == 0) {
+		ADC10CTL0 |= ENC + ADC10SC;			// Enable Sampling and start conversion.
+	}
+
+	if ((timecnt%500) == 0) {
+	newprint = 1;  // flag main while loop that .5 seconds have gone by.  
+	}
+
+}
+
+
+
+//ADC10 interrupt Service Routine
+#pragma vector=ADC10_VECTOR
+__interrupt void ADC10_ISR (void) {
+
+	A0value = ADC[3];  // Notice the reverse in index
+	A3value = ADC[0];  // ADC[0] has A3 value and ADC[3] has A0's value
+
+	ADC10CTL0 &= ~ADC10IFG;  // clear interrupt flag
+
+	ADC10SA = (short)&ADC[0]; // ADC10 data transfer starting address.
+
+	newADC = 1;
+
+}
+
+

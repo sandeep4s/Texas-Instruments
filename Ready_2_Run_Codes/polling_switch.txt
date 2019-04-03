@@ -1,0 +1,31 @@
+#include <msp430G2553.h>
+
+/*
+ * main.c
+ */
+int main(void)
+{
+		WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
+
+
+	    P1DIR|= BIT0 + BIT6;       //configure Port1-->pin0(Red_Led) and Port1-->pin6(Green_Led) as Outputs
+	    P1OUT&= ~(BIT0+BIT6);      //Clear any output voltage at pin0(Red_Led) and pin6(Green_Led)
+
+	    P1DIR&=~BIT3;              //configure Port1-->pin3 as Input
+	    P1REN|=BIT3;			   //Enable Pull_up/Pull_down register for Port1-->Pin3
+	    P1OUT|=BIT3;			   //Select Pull_up mode for Port1-->Pin3
+
+        for(;;)
+        {
+        	if(P1IN&BIT3)
+        	{
+        		 P1OUT&= ~(BIT0+BIT6);
+        	}
+        	else
+        	{
+
+        		 P1OUT|= (BIT0+BIT6);
+        	}
+        }
+
+}

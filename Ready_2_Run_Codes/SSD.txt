@@ -1,0 +1,67 @@
+#include "msp430g2553.h"
+
+
+
+const unsigned char Numeric[]={~0x3f,~0x06,~0x5B,~0x4f,~0x66,~0x6d,~0x7d,~0x07,~0X7F,~0x6F};
+
+void Display();
+void delay();
+
+
+void main()
+{
+	WDTCTL=WDTPW+WDTHOLD;
+
+    int i=0;
+ 	P1DIR|=0xFF;            //To display values
+ 	P1OUT&=~0xFF;
+ 	P2DIR|=0xFF;            //To power the Segments[common cathode]
+ 	P2OUT|=0xFF;
+ 	while(1)
+	{
+		for(i=0;i<200;i++)
+		{
+
+            //delay();
+			Display();
+
+		}
+
+	}
+}
+
+
+
+
+
+
+void Display()
+{
+	P2OUT=BIT0;
+	P1OUT=Numeric[1];
+	delay();
+
+	P2OUT=BIT1;
+	P1OUT=Numeric[2];
+	delay();
+
+	P2OUT=BIT2;
+	P1OUT=Numeric[3];
+	delay();
+
+	P2OUT=BIT3;
+	P1OUT=Numeric[4];
+	delay();
+
+}
+
+
+
+void delay()
+{
+	__delay_cycles(2000);
+}
+
+
+
+
